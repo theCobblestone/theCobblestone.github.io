@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Einstellbarer Countdown</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .timer-container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .inputs {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 25px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .input-group label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        .input-group input {
+            width: 60px;
+            padding: 8px;
+            font-size: 18px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .input-group input:focus {
+            border-color: #007bff;
+        }
+        .display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #222;
+            font-family: 'Courier New', Courier, monospace;
+            margin-bottom: 25px;
+            letter-spacing: 2px;
+        }
+        .controls button {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0 5px;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .controls button:active {
+            transform: scale(0.98);
+        }
+        #btn-start { background-color: #28a745; color: white; }
+        #btn-start:hover { background-color: #218838; }
+        
+        #btn-pause { background-color: #ffc107; color: #212529; }
+        #btn-pause:hover { background-color: #e0a800; }
+        
+        #btn-reset { background-color: #dc3545; color: white; }
+        #btn-reset:hover { background-color: #c82333; }
+        
+        button:disabled {
+            background-color: #cccccc !important;
+            color: #666666 !important;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+<div class="timer-container">
+    <h1>Countdown</h1>
+    
+    <!-- Eingabefelder für die Zeit -->
+    <div class="inputs" id="input-area">
+        <div class="input-group">
+            <label for="hours">Std</label>
+            <input type="number" id="hours" min="0" max="99" value="0">
+        </div>
+        <div class="input-group">
+            <label for="minutes">Min</label>
+            <input type="number" id="minutes" min="0" max="59" value="5">
+        </div>
+        <div class="input-group">
+            <label for="seconds">Sek</label>
+            <input type="number" id="seconds" min="0" max="59" value="0">
+        </div>
+    </div>
+
+    <!-- Anzeige der verbleibenden Zeit -->
+    <div class="display" id="timer-display">00:05:00</div>
+
+    <!-- Steuerungsknöpfe -->
+    <div class="controls">
+        <button id="btn-start">Start</button>
+        <button id="btn-pause" disabled>Pause</button>
+        <button id="btn-reset">Reset</button>
+    </div>
+</div>
+
+<script>
+    let countdownInterval;
+    let totalSeconds = 0;
+    let isPaused = false;
+
+    // HTML-Elemente abgreifen
+    const hoursInput = document.getElementById('hours');
+    const minutesInput = document.getElementById('minutes');
+    const secondsInput = document.getElementById('seconds');
+    const display = document.getElementById('timer-display');
+    const inputArea = document.getElementById('input-area');
+    
+    const btnStart = document.getElementById('btn-start');
+    const btnPause = document.getElementById('btn-pause');
+    const btnReset = document.getElementById('btn-reset');
+
+    // Hilfsfunktion: Formatiert Zahlen zweistellig (z.B. 9 zu "09")
+    function formatTime(time) {
+        return time < 10 ? `0${time}` : time;
+    }
+
+    // Aktualisiert die große Textanzeige auf dem Bildschirm
+    function updateDisplay(secs) {
+        const h = Math.floor(secs / 3600);
+        const m = Math.floor((secs % 3600) / 60);
+        const s = secs % 60;
+        display.textContent = `${formatTime(h)}:${formatTime(m)}:${formatTime(s)}`;
+    }
+
+    // Berechnet die Gesamtsekunden aus den Eingabefeldern
+    function getSecondsFromInputs() {
+        const h = parseInt(hoursInput.value) || 0;
+        const m = parseInt(minutesInput.value) || 0;
+        const s = parseInt(secondsInput.value) || 0;
+        return (h * 3600) + (m * 60) + s;
+    }
+
+    // Event-Listener für Live-Anzeige bei Eingabeänderungen
+    [hoursInput, minutesInput, secondsInput].forEach(input => {
+        input.addEventListener('input', () => {
+            if (!countdownInterval && !isPaused) {
+                const secs = getSecondsFromInputs();
+                updateDisplay(secs);
+            }
+        });
+    });
+
+    // Start-Button Logik
+    btnStart.addEventListener('click', () => {
+        if (!isPaused) {
+            totalSeconds = getSecondsFromInputs();
+        }
+
+        if (totalSeconds <= 0) {
+            alert('Bitte gib eine gültige Zeit ein!');
+            return;
+        }
+
+        // GUI-Zustand anpassen
+        isPaused = false;
+        btnStart.disabled = true;
+        btnPause.disabled = false;
+        // Eingaben während des Laufs sperren
+        toggleInputs(true);
+
+        // Der eigentliche Intervall (läuft jede Sekunde)
+        countdownInterval = setInterval(() => {
+            totalSeconds--;
+            updateDisplay(totalSeconds);
+
+            if (totalSeconds <= 0) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+                alert('Zeit abgelaufen!');
+                resetTimer();
+            }
+        }, 1000);
+    });
+
+    // Pause-Button Logik
+    btnPause.addEventListener('click', () => {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+        isPaused = true;
+        btnStart.disabled = false;
+        btnPause.disabled = true;
+    });
+
+    // Reset-Button Logik
+    btnReset.addEventListener('click', () => {
+        resetTimer();
+    });
+
+    function resetTimer() {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+        isPaused = false;
+        
+        btnStart.disabled = false;
+        btnPause.disabled = true;
+        toggleInputs(false);
+        
+        // Zeigt wieder die aktuell eingestellte Zeit der Boxen an
+        updateDisplay(getSecondsFromInputs());
+    }
+
+    function toggleInputs(disabled) {
+        hoursInput.disabled = disabled;
+        minutesInput.disabled = disabled;
+        secondsInput.disabled = disabled;
+    }
+</script>
+
+</body>
+</html>
